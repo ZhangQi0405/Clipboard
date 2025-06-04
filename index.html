@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>共享剪贴板</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container">
+        <!-- 左侧栏 -->
+        <div class="sidebar">
+            <div class="sidebar-header">
+                <h1><i class="fas fa-clipboard"></i> 共享剪贴板</h1>
+                <div class="header-actions">
+                    <button class="btn btn-primary" id="addFolderBtn">
+                        <i class="fas fa-folder-plus"></i> 新建文件夹
+                    </button>
+                    <button class="btn btn-primary mobile-only" id="selectFolderBtn">
+                        <i class="fas fa-folder-open"></i> 选择文件夹
+                    </button>
+                    <button class="btn btn-edit" id="editFolderBtn" title="编辑文件夹">
+                        <i class="fas fa-edit"></i>
+                    </button>
+                    <button class="btn btn-secondary" id="refreshBtn" title="刷新">
+                        <i class="fas fa-sync-alt"></i>
+                    </button>
+                </div>
+            </div>
+
+            <div class="search-container">
+                <input type="text" id="searchInput" placeholder="搜索内容...">
+                <i class="fas fa-search search-icon"></i>
+            </div>
+
+            <div class="folder-tree" id="folderTree">
+                <div class="loading">
+                    <i class="fas fa-spinner fa-spin"></i> 加载中...
+                </div>
+            </div>
+
+            <div class="sidebar-footer">
+                <div class="status-indicator">
+                    <span class="status-dot" id="statusDot"></span>
+                    <span id="statusText">连接中...</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- 右侧主内容区 -->
+        <div class="main-content">
+            <div class="content-header">
+                <h2 id="currentFolderTitle">全部内容</h2>
+                <div class="header-info">
+                    <span id="itemCount">0 条内容</span>
+                    <span class="last-update" id="lastUpdate"></span>
+                </div>
+            </div>
+
+            <div class="input-area">
+                <div class="input-container">
+                    <input type="text" id="itemTitle" placeholder="标题（可选）" maxlength="100">
+                    <textarea id="itemContent" placeholder="在这里输入或粘贴您的内容..." rows="6"></textarea>
+                    
+                    <!-- 添加附件预览区域 -->
+                    <div id="attachmentPreview" style="display: none;" class="attachment-preview">
+                        <!-- 附件预览内容将动态插入 -->
+                    </div>
+                    
+                    <div class="input-actions">
+                        <!-- 添加上传附件按钮 -->
+                        <label class="btn btn-secondary" for="fileInput">
+                            <i class="fas fa-paperclip"></i> 上传附件
+                        </label>
+                        <input type="file" id="fileInput" class="hidden-file-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.7z">
+                        
+                        <select id="folderSelect">
+                            <option value="">选择文件夹（可选）</option>
+                        </select>
+                        <button class="btn btn-primary" id="saveItemBtn">
+                            <i class="fas fa-save"></i> 保存
+                        </button>
+                        <button class="btn btn-secondary" id="clearInputBtn">
+                            <i class="fas fa-eraser"></i> 清空
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <div class="items-container" id="itemsContainer">
+                <!-- 剪贴板条目将在这里显示 -->
+            </div>
+        </div>
+    </div>
+
+    <!-- 新建文件夹模态框 -->
+    <div class="modal" id="folderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>创建文件夹</h3>
+                <button class="modal-close" id="closeFolderModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="folderNameInput" placeholder="文件夹名称" maxlength="50">
+                <div class="color-picker">
+                    <label>选择颜色：</label>
+                    <div class="color-options">
+                        <div class="color-option" data-color="#3498db" style="background: #3498db;"></div>
+                        <div class="color-option" data-color="#e74c3c" style="background: #e74c3c;"></div>
+                        <div class="color-option" data-color="#2ecc71" style="background: #2ecc71;"></div>
+                        <div class="color-option" data-color="#f39c12" style="background: #f39c12;"></div>
+                        <div class="color-option" data-color="#9b59b6" style="background: #9b59b6;"></div>
+                        <div class="color-option selected" data-color="#34495e" style="background: #34495e;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelFolderBtn">取消</button>
+                <button class="btn btn-primary" id="confirmFolderBtn">创建</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑文件夹模态框 -->
+    <div class="modal" id="editFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑文件夹</h3>
+                <button class="modal-close" id="closeEditFolderModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <label class="folder-name-label">修改文件夹名称：</label>
+                <input type="text" id="editFolderNameInput" placeholder="文件夹名称" maxlength="50">
+                <div class="color-picker">
+                    <label>选择颜色：</label>
+                    <div class="color-options" id="editColorOptions">
+                        <div class="color-option" data-color="#3498db" style="background: #3498db;"></div>
+                        <div class="color-option" data-color="#e74c3c" style="background: #e74c3c;"></div>
+                        <div class="color-option" data-color="#2ecc71" style="background: #2ecc71;"></div>
+                        <div class="color-option" data-color="#f39c12" style="background: #f39c12;"></div>
+                        <div class="color-option" data-color="#9b59b6" style="background: #9b59b6;"></div>
+                        <div class="color-option" data-color="#34495e" style="background: #34495e;"></div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="deleteFolderBtn">
+                    <i class="fas fa-trash"></i> 删除文件夹
+                </button>
+                <button class="btn btn-secondary" id="cancelEditFolderBtn">取消</button>
+                <button class="btn btn-primary" id="confirmEditFolderBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 编辑模态框 -->
+    <div class="modal" id="editModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>编辑内容</h3>
+                <button class="modal-close" id="closeEditModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <input type="text" id="editTitle" placeholder="标题" maxlength="100">
+                <textarea id="editContent" placeholder="内容" rows="8"></textarea>
+                
+                <!-- 添加附件预览区域 -->
+                <div id="editAttachmentPreview" style="display: none;" class="attachment-preview">
+                    <!-- 附件预览内容将动态插入 -->
+                </div>
+                
+                <!-- 添加更新附件的按钮 -->
+                <div style="margin-top: 15px;">
+                    <label class="btn btn-secondary" for="editFileInput">
+                        <i class="fas fa-paperclip"></i> 更新附件
+                    </label>
+                    <input type="file" id="editFileInput" class="hidden-file-input" accept="image/*,.pdf,.doc,.docx,.xls,.xlsx,.txt,.zip,.7z">
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-danger" id="deleteItemBtn">
+                    <i class="fas fa-trash"></i> 删除
+                </button>
+                <button class="btn btn-secondary" id="cancelEditBtn">取消</button>
+                <button class="btn btn-primary" id="confirmEditBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 通知提示 -->
+    <div class="notification" id="notification"></div>
+
+    <!-- 选择文件夹模态框（移动端） -->
+    <div class="modal" id="selectFolderModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>选择文件夹</h3>
+                <button class="modal-close" id="closeSelectFolderModal">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="modal-body">
+                <div class="folder-select-list" id="mobileFolderList">
+                    <!-- 文件夹列表将在这里显示 -->
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancelSelectFolderBtn">取消</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 图片预览模态框 -->
+    <div class="image-preview-modal" id="imagePreviewModal">
+        <div class="image-preview-content">
+            <button class="image-preview-close" id="closeImagePreview">
+                <i class="fas fa-times"></i>
+            </button>
+            <img id="previewImage" src="" alt="预览图片">
+        </div>
+        <a class="image-preview-download" id="downloadImage" href="#" download>
+            <i class="fas fa-download"></i> 下载图片
+        </a>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
